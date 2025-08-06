@@ -1,5 +1,6 @@
 import { supabase } from "../utils/supabase";
 import { ChatbotStage } from "../types/chatbot.types";
+import { STAGES } from "../lib/systemPrompt";
 
 export async function getProjectStage(
   projectId: string
@@ -24,4 +25,64 @@ export async function setProjectStage(
     .eq("id", projectId);
 
   if (error) throw new Error(`setProjectStage failed: ${error.message}`);
+}
+
+export async function getCompletedStages(
+  projectId: string
+): Promise<ChatbotStage[]> {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("completed_stages")
+    .eq("id", projectId)
+    .single();
+
+  if (error) throw new Error(`getCompletedStages failed: ${error.message}`);
+  return (data?.completed_stages || []) as ChatbotStage[];
+}
+
+export async function markStageCompleted(
+  projectId: string,
+  stage: ChatbotStage
+): Promise<void> {
+  const completed = await getCompletedStages(projectId);
+  if (!completed.includes(stage)) {
+    completed.push(stage);
+    const { error } = await supabase
+      .from("projects")
+      .update({ completed_stages: completed })
+      .eq("id", projectId);
+    if (error) throw new Error(`markStageCompleted failed: ${error.message}`);
+  }
+}
+
+export function getNextUncompletedStage(
+  currentStage?: ChatbotStage,
+  completed: ChatbotStage[] = []
+): ChatbotStage | null {
+  if (!currentStage)
+    return STAGES.length > 0 ? (STAGES[0] as ChatbotStage) : null;
+  const currentIndex = STAGES.indexOf(currentStage);
+  for (let i = currentIndex + 1; i < STAGES.length; i++) {
+    const stage = STAGES[i];
+    if (stage && !completed.includes(stage)) {
+      return stage;
+    }
+  }
+  return null;
+}
+
+export function getPreviousUncompletedStage(
+  currentStage?: ChatbotStage,
+  completed: ChatbotStage[] = []
+): ChatbotStage | null {
+  if (!currentStage) return null;
+
+  const currentIndex = STAGES.indexOf(currentStage);
+  for (let i = currentIndex - 1; i >= 0; i--) {
+    const stage = STAGES[i];
+    if (stage && !completed.includes(stage)) {
+      return stage;
+    }
+  }
+  return null;
 }

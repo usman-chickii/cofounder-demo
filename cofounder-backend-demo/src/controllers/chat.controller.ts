@@ -10,7 +10,10 @@ export async function streamWithIntent(req: Request, res: Response) {
   res.flushHeaders();
 
   let buffer = "";
-
+  console.log("🚀 chatbotGraph invoked:", {
+    projectId,
+    latestMessage: message,
+  });
   await chatbotGraph.invoke({
     projectId,
     latestMessage: message,

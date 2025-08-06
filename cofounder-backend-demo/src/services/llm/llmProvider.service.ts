@@ -6,7 +6,6 @@ import { LLMMessage } from "../../types/llm.types";
 
 export const askLLM = async (
   messages: LLMMessage[],
-  stage: ChatbotStage,
   providerOverride?: "groq" | "openai" | "claude"
 ) => {
   const provider = providerOverride || ENV.DEFAULT_LLM_PROVIDER;

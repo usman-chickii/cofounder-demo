@@ -9,6 +9,15 @@ export type ChatbotStage =
   | "ui_preferences"
   | "final_summary";
 
+export const STAGES: ChatbotStage[] = [
+  "idea_generation",
+  "refinement",
+  "market_analysis",
+  "competitive_analysis",
+  "document_generation",
+  "ui_preferences",
+  "final_summary",
+];
 export const getSystemPrompt = (stage: ChatbotStage): string => {
   switch (stage) {
     case "idea_generation":
