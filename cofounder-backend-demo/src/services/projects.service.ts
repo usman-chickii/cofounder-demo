@@ -86,3 +86,53 @@ export function getPreviousUncompletedStage(
   }
   return null;
 }
+
+export async function getProjectMetadata(projectId: string) {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("session_metadata, stage_data")
+    .eq("id", projectId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching project metadata:", error);
+    return { session_metadata: {}, stage_data: {} };
+  }
+
+  return {
+    session_metadata: data?.session_metadata || {},
+    stage_data: data?.stage_data || {},
+  };
+}
+
+export async function updateProjectMetadata(
+  projectId: string,
+  stageKey: string,
+  globalData: Record<string, any>,
+  stageDataInput: Record<string, any>
+) {
+  const { data: project, error: fetchError } = await supabase
+    .from("projects")
+    .select("stage_data, session_metadata")
+    .eq("id", projectId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  const stageData = project.stage_data || {};
+  const sessionMetadata = project.session_metadata || {};
+
+  // Merge data
+  stageData[stageKey] = { ...stageData[stageKey], ...stageDataInput };
+  const updatedSessionMeta = { ...sessionMetadata, ...globalData };
+
+  const { error: updateError } = await supabase
+    .from("projects")
+    .update({
+      stage_data: stageData,
+      session_metadata: updatedSessionMeta,
+    })
+    .eq("id", projectId);
+
+  if (updateError) throw updateError;
+}

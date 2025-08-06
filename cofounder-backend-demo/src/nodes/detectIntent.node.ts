@@ -96,7 +96,7 @@ ${latestMessage}
     parsedIntent = intentSchema.parse(parsed).intent;
   } catch (err) {
     console.error("❌ Intent parsing failed:", err, "LLM output:", llmResponse);
-    parsedIntent = "idea_generation"; // fallback
+    parsedIntent = "general_chat"; // fallback
   }
   console.log(`🧠 Detected intent for project ${projectId}: ${parsedIntent}`);
 

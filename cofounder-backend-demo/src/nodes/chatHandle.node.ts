@@ -32,13 +32,13 @@ export async function chatHandlerNode({
 
   // Stream response from LLM
   let fullAssistantResponse = "";
-  await streamLLM(messages, stage, (chunk) => {
+  await streamLLM(messages, (chunk) => {
     fullAssistantResponse += chunk;
     onData(chunk);
   });
 
   // Save assistant reply
-  await saveMessage("assistant", fullAssistantResponse, projectId);
+  await saveMessage("assistant", fullAssistantResponse, projectId, stage);
 
   return { success: true };
 }

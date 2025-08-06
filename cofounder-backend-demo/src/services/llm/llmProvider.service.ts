@@ -1,7 +1,7 @@
 // src/services/llm/llmProvider.service.ts
 import { ENV } from "../../config/env";
 import { askGroq, streamGroq } from "./groq.service";
-import { ChatbotStage } from "../../types/chatbot.types";
+// import { ChatbotStage } from "../../types/chatbot.types";
 import { LLMMessage } from "../../types/llm.types";
 
 export const askLLM = async (
@@ -24,7 +24,6 @@ export const askLLM = async (
 
 export const streamLLM = async (
   messages: LLMMessage[],
-  stage: ChatbotStage,
   onData: (chunk: string) => void,
   providerOverride?: "groq" | "openai" | "claude"
 ) => {
