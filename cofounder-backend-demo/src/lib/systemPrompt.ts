@@ -1,23 +1,7 @@
 // src/utils/systemPrompt.ts
 
-export type ChatbotStage =
-  | "idea_generation"
-  | "refinement"
-  | "market_analysis"
-  | "competitive_analysis"
-  | "document_generation"
-  | "ui_preferences"
-  | "final_summary";
+import { ChatbotStage } from "../types/chatbot.types";
 
-export const STAGES: ChatbotStage[] = [
-  "idea_generation",
-  "refinement",
-  "market_analysis",
-  "competitive_analysis",
-  "document_generation",
-  "ui_preferences",
-  "final_summary",
-];
 export const getSystemPrompt = (stage: ChatbotStage): string => {
   switch (stage) {
     case "idea_generation":
@@ -40,6 +24,12 @@ export const getSystemPrompt = (stage: ChatbotStage): string => {
 
     case "final_summary":
       return `You are summarizing the full project scope and guiding the user on next steps.`;
+
+    case "branding_foundation":
+      return `You are helping the user create a brand foundation. Ask questions about their brand identity, values, and target audience.`;
+
+    case "tech_stack_suggestion":
+      return `You are suggesting a tech stack for the user's startup. Ask questions about their tech stack preferences and requirements.`;
 
     default:
       return `You are a helpful AI cofounder. Guide the user step-by-step to refine their startup idea and execute it.`;

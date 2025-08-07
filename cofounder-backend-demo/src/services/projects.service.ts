@@ -1,6 +1,6 @@
 import { supabase } from "../utils/supabase";
 import { ChatbotStage } from "../types/chatbot.types";
-import { STAGES } from "../lib/systemPrompt";
+import { STAGES } from "../types/chatbot.types";
 
 export async function getProjectStage(
   projectId: string

@@ -1,6 +1,6 @@
 // src/llm/nodes/router.node.ts
 import { ChatbotStage } from "../types/chatbot.types";
-import { STAGES } from "../lib/systemPrompt";
+import { STAGES } from "../types/chatbot.types";
 import {
   getNextUncompletedStage,
   getPreviousUncompletedStage,

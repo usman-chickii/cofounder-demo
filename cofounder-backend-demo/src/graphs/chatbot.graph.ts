@@ -3,61 +3,63 @@ import { StateGraph, Annotation } from "@langchain/langgraph";
 import { ChatbotStage } from "../types/chatbot.types";
 import { generalChatNode } from "../nodes/generalChat.node";
 import { streamLLM } from "../services/llm/llmProvider.service";
-import {
-  getCompletedStages,
-  getProjectStage,
-} from "../services/projects.service";
-import { routerNode } from "../nodes/router.node";
+import // getCompletedStages,
+// getProjectStage,
+"../services/projects.service";
+// import { routerNode } from "../nodes/router.node";
 import { ideaGenerationNode } from "../nodes/stages_nodes/ideaGeneration.node";
 import { refinementNode } from "../nodes/stages_nodes/refinement.node";
+import { marketAnalysisNode } from "../nodes/stages_nodes/marketAnalysis.node";
+import { competitiveAnalysisNode } from "../nodes/stages_nodes/competitiveAnalysis.node";
+import { documentGenerationNode } from "../nodes/stages_nodes/documentGeneration.node";
+import { brandingFoundationNode } from "../nodes/stages_nodes/brandingFoundation.node";
+import { techStackSuggestionNode } from "../nodes/stages_nodes/techStackSuggestion.node";
+import { uiPreferencesNode } from "../nodes/stages_nodes/uiPreferences.node";
+import { finalSummaryNode } from "../nodes/stages_nodes/finalSummary.node";
 
 const StateAnnotation = Annotation.Root({
   projectId: Annotation<string>(),
   latestMessage: Annotation<string>(),
   parsedIntent: Annotation<string>(),
   nextStage: Annotation<ChatbotStage | "general_chat" | undefined>(),
+  stage: Annotation<ChatbotStage | "general_chat" | undefined>(),
   onData: Annotation<(chunk: string) => void>(),
 });
 
-// // 1️⃣ Intent classification (LLM only)
-// const intentClassificationNode = async (state: any) => {
-//   console.log("📍 Entering intentClassificationNode");
-//   const { intent } = await detectIntentNode({
-//     projectId: state.projectId,
-//     latestMessage: state.latestMessage,
-//   });
-//   console.log("🧠 Detected intent:", intent);
-
-//   return { parsedIntent: intent };
-// };
-
-// // 2️⃣ Router (backend rules)
-// const routerStateNode = async (state: any) => {
-//   const completedStages = await getCompletedStages(state.projectId);
-//   const currentStage = await getProjectStage(state.projectId);
-//   console.log("📍 Entering routerStateNode");
-//   console.log("parsedIntent from state:", state.parsedIntent);
-//   console.log("currentStage from DB:", currentStage);
-//   console.log("completedStages from DB:", completedStages);
-
-//   const { nextStage } = await routerNode({
-//     parsedIntent: state.parsedIntent,
-//     currentStage: currentStage || "idea_generation",
-//     completedStages,
-//     projectId: state.projectId,
-//   });
-//   console.log("📍 Router decided nextStage:", nextStage);
-
-//   return { nextStage };
-// };
-
-// 1️⃣ Intent classification node
 const intentClassificationNode = async (state: any) => {
   const systemPrompt = `
-    Your job is to classify the user's latest message into one of these stages:
+    You are a strict classification engine.
+    
+    Classify the user's latest message into **exactly one** of the following stages:
     ["idea_generation", "refinement", "market_analysis", "competitive_analysis", "document_generation", "ui_preferences", "final_summary", "general_chat"]
-  
-    Reply with only the stage name.
+    
+    Respond ONLY with the stage name. Do not explain.
+    
+    Examples:
+    User: I have an idea for an app, can you help me expand it?
+    Classification: refinement
+    
+    User: Can you generate me a business idea?
+    Classification: idea_generation
+    
+    User: What are my competitors doing?
+    Classification: competitive_analysis
+    
+    User: What tech stack should I use?
+    Classification: general_chat
+    
+    User: I want a simple and clean UI
+    Classification: ui_preferences
+
+    User: Suggest some fonts and colors for my brand.
+    Classification: branding_foundation
+
+    User: What tech stack should I use for a mobile app?
+    Classification: tech_stack_suggestion
+    
+    Now classify the following:
+    User: ${state.latestMessage}
+    Classification:
     `;
 
   let reply = "";
@@ -68,50 +70,99 @@ const intentClassificationNode = async (state: any) => {
     ],
     (chunk) => (reply += chunk)
   );
-
+  console.log("reply from intent classification node:", reply);
   const stage = reply.trim() as ChatbotStage | "general_chat";
   console.log("🧠 Detected stage:", stage);
 
   return { parsedIntent: stage };
 };
 
-// 2️⃣ Router node
 const routerStateNode = async (state: any) => {
-  const completedStages = await getCompletedStages(state.projectId);
-  const currentStage = await getProjectStage(state.projectId);
+  const stage = state.parsedIntent;
 
-  const { nextStage } = await routerNode({
-    parsedIntent: state.parsedIntent,
-    currentStage: currentStage || "idea_generation",
-    completedStages,
-    projectId: state.projectId,
-  });
-
-  return { nextStage };
+  return {
+    nextStage: stage,
+    stage,
+  };
 };
 
 // 3️⃣ Stage handler
 const stageHandlerStateNode = async (state: any) => {
-  console.log("📍 Stage handler running:", state.nextStage);
+  console.log("📍 Stage handler running:", state.stage);
 
-  if (state.nextStage === "idea_generation") {
-    await ideaGenerationNode.invoke({
-      projectId: state.projectId,
-      userMessage: state.latestMessage,
-      onData: state.onData,
-    });
-  } else if (state.nextStage === "refinement") {
-    await refinementNode.invoke({
-      projectId: state.projectId,
-      userMessage: state.latestMessage,
-      onData: state.onData,
-    });
-  } else {
-    await generalChatNode({
-      projectId: state.projectId,
-      latestMessage: state.latestMessage,
-      onData: state.onData,
-    });
+  switch (state.stage) {
+    case "idea_generation":
+      await ideaGenerationNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "refinement":
+      await refinementNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "market_analysis":
+      await marketAnalysisNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "competitive_analysis":
+      await competitiveAnalysisNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "document_generation":
+      await documentGenerationNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "branding_foundation":
+      await brandingFoundationNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "tech_stack_suggestion":
+      await techStackSuggestionNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "ui_preferences":
+      await uiPreferencesNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "final_summary":
+      await finalSummaryNode.invoke({
+        projectId: state.projectId,
+        userMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    case "general_chat":
+      await generalChatNode({
+        projectId: state.projectId,
+        latestMessage: state.latestMessage,
+        onData: state.onData,
+      });
+      break;
+    default:
+      throw new Error(`Unhandled stage: ${state.stage}`);
   }
 
   return {};
@@ -122,14 +173,11 @@ const graph = new StateGraph(StateAnnotation)
   .addNode("intent_classification", intentClassificationNode)
   .addNode("router", routerStateNode)
   .addNode("stage_handler", stageHandlerStateNode)
-  .addNode("general_chat", generalChatNode)
+  //   .addNode("general_chat", generalChatNode)
 
   .addEdge("__start__", "intent_classification")
   .addEdge("intent_classification", "router")
 
-  .addConditionalEdges("router", (state) => {
-    if (state.nextStage === "general_chat") return "general_chat";
-    return "stage_handler";
-  });
+  .addConditionalEdges("router", () => "stage_handler");
 
 export const chatbotGraph = graph.compile();

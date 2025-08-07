@@ -16,6 +16,8 @@ const STAGES = [
   "document_generation",
   "ui_preferences",
   "final_summary",
+  "branding_foundation",
+  "tech_stack_suggestion",
 ] as const;
 
 const intentSchema = z.object({

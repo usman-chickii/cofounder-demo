@@ -5,24 +5,22 @@ import { ChatbotStage } from "../../types/chatbot.types";
 import { LLMMessage } from "../../types/llm.types";
 import { getStageMessages, saveMessage } from "../../services/messages.service";
 
-const STAGE_KEY: ChatbotStage = "idea_generation";
+const STAGE_KEY: ChatbotStage = "tech_stack_suggestion";
 const PRELOADED_PROMPT = getSystemPrompt(STAGE_KEY);
 
-interface IdeaGenInput {
+interface TechStackInput {
   projectId: string;
   userMessage: string;
   onData: (chunk: string) => void;
 }
 
-export const ideaGenerationNode = new RunnableLambda<
-  IdeaGenInput,
+export const techStackSuggestionNode = new RunnableLambda<
+  TechStackInput,
   { stage: ChatbotStage }
 >({
-  func: async ({ projectId, userMessage, onData }: IdeaGenInput) => {
-    // Fire-and-forget save for user message
+  func: async ({ projectId, userMessage, onData }: TechStackInput) => {
     saveMessage("user", userMessage, projectId, STAGE_KEY).catch(console.error);
 
-    // Fetch previous stage messages
     const stageMessages = await getStageMessages(projectId, STAGE_KEY, 5);
 
     const previousMessages =
@@ -30,7 +28,6 @@ export const ideaGenerationNode = new RunnableLambda<
         ? stageMessages.map((m) => m.content).join("\n")
         : "No previous messages for this stage.";
 
-    // Build prompt/context
     const systemPrompt = `
     ${PRELOADED_PROMPT}
 
