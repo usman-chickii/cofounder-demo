@@ -2,6 +2,7 @@ import { supabase } from "../utils/supabase";
 import { ChatbotStage } from "../types/chatbot.types";
 import { STAGES } from "../types/chatbot.types";
 import { ProjectContext } from "../types/projectContext.types";
+import { deepMergeProjectContext } from "../utils/projectContext.util";
 
 export async function getProjectStage(
   projectId: string
@@ -109,10 +110,10 @@ export async function updateProjectContext(
     {}) as ProjectContext;
 
   // Merge updates
-  const updatedContext: ProjectContext = {
-    ...existingContext,
-    ...updates,
-  };
+  const updatedContext: ProjectContext = deepMergeProjectContext(
+    existingContext,
+    updates
+  );
 
   // Save back to DB
   const { error } = await supabase
