@@ -3,7 +3,10 @@ import { getSystemPrompt } from "../../lib/systemPrompt";
 import { streamLLM } from "../../services/llm/llmProvider.service";
 import { ChatbotStage } from "../../types/chatbot.types";
 import { LLMMessage } from "../../types/llm.types";
-import { getStageMessages, saveMessage } from "../../services/messages.service";
+import { saveMessage } from "../../services/messages.service";
+import { buildContextPrompt } from "../../utils/contextBuilder";
+import { updateProjectContext } from "../../services/projects.service";
+import { extractMetadataFromReply } from "../../lib/extractMetaData";
 
 const STAGE_KEY: ChatbotStage = "idea_generation";
 const PRELOADED_PROMPT = getSystemPrompt(STAGE_KEY);
@@ -22,14 +25,6 @@ export const ideaGenerationNode = new RunnableLambda<
     // Fire-and-forget save for user message
     saveMessage("user", userMessage, projectId, STAGE_KEY).catch(console.error);
 
-    // Fetch previous stage messages
-    const stageMessages = await getStageMessages(projectId, STAGE_KEY, 5);
-
-    const previousMessages =
-      stageMessages.length > 0
-        ? stageMessages.map((m) => m.content).join("\n")
-        : "No previous messages for this stage.";
-
     // Build prompt/context
     const systemPrompt = `
     ${PRELOADED_PROMPT}
@@ -38,9 +33,7 @@ export const ideaGenerationNode = new RunnableLambda<
     Use the previous messages for context if helpful.
     `;
 
-    const context = `
-    Recent Stage Messages: ${previousMessages}
-    `;
+    const context = await buildContextPrompt(projectId, STAGE_KEY);
 
     const messages: LLMMessage[] = [
       { role: "system", content: systemPrompt },
@@ -58,6 +51,12 @@ export const ideaGenerationNode = new RunnableLambda<
     saveMessage("assistant", assistantReply.trim(), projectId, STAGE_KEY).catch(
       console.error
     );
+
+    // Extract & update metadata
+    const extracted = await extractMetadataFromReply(assistantReply, STAGE_KEY);
+    if (extracted) {
+      await updateProjectContext(projectId, extracted);
+    }
 
     return { stage: STAGE_KEY };
   },

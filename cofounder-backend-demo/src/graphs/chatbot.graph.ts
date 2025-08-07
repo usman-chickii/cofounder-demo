@@ -2,7 +2,7 @@
 import { StateGraph, Annotation } from "@langchain/langgraph";
 import { ChatbotStage } from "../types/chatbot.types";
 import { generalChatNode } from "../nodes/generalChat.node";
-import { streamLLM } from "../services/llm/llmProvider.service";
+import { askLLM } from "../services/llm/llmProvider.service";
 import // getCompletedStages,
 // getProjectStage,
 "../services/projects.service";
@@ -16,6 +16,8 @@ import { brandingFoundationNode } from "../nodes/stages_nodes/brandingFoundation
 import { techStackSuggestionNode } from "../nodes/stages_nodes/techStackSuggestion.node";
 import { uiPreferencesNode } from "../nodes/stages_nodes/uiPreferences.node";
 import { finalSummaryNode } from "../nodes/stages_nodes/finalSummary.node";
+import { STAGES } from "../types/chatbot.types";
+import { fewShotExamples } from "../lib/fewShotExamples";
 
 const StateAnnotation = Annotation.Root({
   projectId: Annotation<string>(),
@@ -31,45 +33,22 @@ const intentClassificationNode = async (state: any) => {
     You are a strict classification engine.
     
     Classify the user's latest message into **exactly one** of the following stages:
-    ["idea_generation", "refinement", "market_analysis", "competitive_analysis", "document_generation", "ui_preferences", "final_summary", "general_chat"]
+    ${STAGES.join(", ")}
     
     Respond ONLY with the stage name. Do not explain.
     
     Examples:
-    User: I have an idea for an app, can you help me expand it?
-    Classification: refinement
-    
-    User: Can you generate me a business idea?
-    Classification: idea_generation
-    
-    User: What are my competitors doing?
-    Classification: competitive_analysis
-    
-    User: What tech stack should I use?
-    Classification: general_chat
-    
-    User: I want a simple and clean UI
-    Classification: ui_preferences
-
-    User: Suggest some fonts and colors for my brand.
-    Classification: branding_foundation
-
-    User: What tech stack should I use for a mobile app?
-    Classification: tech_stack_suggestion
+    ${fewShotExamples}
     
     Now classify the following:
     User: ${state.latestMessage}
     Classification:
     `;
 
-  let reply = "";
-  await streamLLM(
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: state.latestMessage },
-    ],
-    (chunk) => (reply += chunk)
-  );
+  const reply = await askLLM([
+    { role: "system", content: systemPrompt },
+    { role: "user", content: state.latestMessage },
+  ]);
   console.log("reply from intent classification node:", reply);
   const stage = reply.trim() as ChatbotStage | "general_chat";
   console.log("🧠 Detected stage:", stage);
@@ -173,7 +152,6 @@ const graph = new StateGraph(StateAnnotation)
   .addNode("intent_classification", intentClassificationNode)
   .addNode("router", routerStateNode)
   .addNode("stage_handler", stageHandlerStateNode)
-  //   .addNode("general_chat", generalChatNode)
 
   .addEdge("__start__", "intent_classification")
   .addEdge("intent_classification", "router")

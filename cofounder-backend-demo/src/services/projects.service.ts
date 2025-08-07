@@ -1,6 +1,7 @@
 import { supabase } from "../utils/supabase";
 import { ChatbotStage } from "../types/chatbot.types";
 import { STAGES } from "../types/chatbot.types";
+import { ProjectContext } from "../types/projectContext.types";
 
 export async function getProjectStage(
   projectId: string
@@ -87,52 +88,56 @@ export function getPreviousUncompletedStage(
   return null;
 }
 
-export async function getProjectMetadata(projectId: string) {
+export async function updateProjectContext(
+  projectId: string,
+  updates: Partial<ProjectContext>
+): Promise<void> {
+  // Fetch existing context
+  const result = await supabase
+    .from("projects")
+    .select("session_metadata")
+    .eq("id", projectId)
+    .single();
+
+  if (result.error) {
+    throw new Error(
+      `Failed to fetch project metadata: ${result.error.message}`
+    );
+  }
+
+  const existingContext = (result.data?.session_metadata ??
+    {}) as ProjectContext;
+
+  // Merge updates
+  const updatedContext: ProjectContext = {
+    ...existingContext,
+    ...updates,
+  };
+
+  // Save back to DB
+  const { error } = await supabase
+    .from("projects")
+    .update({ session_metadata: updatedContext })
+    .eq("id", projectId);
+
+  if (error) {
+    throw new Error(`Failed to update project context: ${error.message}`);
+  }
+}
+
+export async function getProjectContext(
+  projectId: string
+): Promise<ProjectContext | null> {
   const { data, error } = await supabase
     .from("projects")
-    .select("session_metadata, stage_data")
+    .select("session_metadata")
     .eq("id", projectId)
     .single();
 
   if (error) {
-    console.error("Error fetching project metadata:", error);
-    return { session_metadata: {}, stage_data: {} };
+    console.error("Failed to fetch project context:", error);
+    return null;
   }
 
-  return {
-    session_metadata: data?.session_metadata || {},
-    stage_data: data?.stage_data || {},
-  };
-}
-
-export async function updateProjectMetadata(
-  projectId: string,
-  stageKey: string,
-  globalData: Record<string, any>,
-  stageDataInput: Record<string, any>
-) {
-  const { data: project, error: fetchError } = await supabase
-    .from("projects")
-    .select("stage_data, session_metadata")
-    .eq("id", projectId)
-    .single();
-
-  if (fetchError) throw fetchError;
-
-  const stageData = project.stage_data || {};
-  const sessionMetadata = project.session_metadata || {};
-
-  // Merge data
-  stageData[stageKey] = { ...stageData[stageKey], ...stageDataInput };
-  const updatedSessionMeta = { ...sessionMetadata, ...globalData };
-
-  const { error: updateError } = await supabase
-    .from("projects")
-    .update({
-      stage_data: stageData,
-      session_metadata: updatedSessionMeta,
-    })
-    .eq("id", projectId);
-
-  if (updateError) throw updateError;
+  return (data?.session_metadata || {}) as ProjectContext;
 }
