@@ -25,8 +25,8 @@ export const getSystemPrompt = (stage: ChatbotStage): string => {
     case "final_summary":
       return `You are summarizing the full project scope and guiding the user on next steps.`;
 
-    case "branding_foundation":
-      return `You are helping the user create a brand foundation. Ask questions about their brand identity, values, and target audience.`;
+    // case "branding_foundation":
+    //   return `You are helping the user create a brand foundation. Ask questions about their brand identity, values, and target audience.`;
 
     case "tech_stack_suggestion":
       return `You are suggesting a tech stack for the user's startup. Ask questions about their tech stack preferences and requirements.`;

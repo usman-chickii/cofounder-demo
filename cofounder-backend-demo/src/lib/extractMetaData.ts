@@ -3,6 +3,49 @@ import { ChatbotStage } from "../types/chatbot.types";
 import { LLMMessage } from "../types/llm.types";
 import { ProjectContext } from "../types/projectContext.types";
 
+const fullProjectContextSchema = {
+  idea_generation: {
+    idea: "string (optional)",
+  },
+  refinement: {
+    refinedIdea: "string (optional)",
+  },
+  market_analysis: {
+    marketOverview: "string (optional)",
+    competitors: "string[] (optional)",
+  },
+  branding_foundation: {
+    branding: {
+      name: "string (optional)",
+      tagline: "string (optional)",
+      tone: "string (optional)",
+    },
+  },
+  ui_preferences: {
+    colorPalette: "string[] (optional)",
+    layoutPreferences: "string (optional)",
+    accessibilityNeeds: "string (optional)",
+    logoStyle: "string (optional)",
+    typography: "string (optional)",
+  },
+  tech_stack_suggestion: {
+    techStack: "string[] (optional)",
+  },
+  document_generation: {
+    summary: "string (optional)",
+  },
+  final_summary: {
+    summary: "string (optional)",
+  },
+};
+function getStageSchema(stage: ChatbotStage) {
+  return JSON.stringify(
+    fullProjectContextSchema[stage as keyof typeof fullProjectContextSchema],
+    null,
+    2
+  );
+}
+
 export async function extractMetadataFromReply(
   reply: string,
   stage: ChatbotStage
@@ -10,48 +53,23 @@ export async function extractMetadataFromReply(
   const extractionPrompt = `
 You are a metadata extraction assistant.
 
-Your task is to extract only relevant structured data from the assistant's reply during the "${stage}" stage of a business idea discussion.
+Extract structured data from the assistant's reply during the "${stage}" stage of a business idea discussion.
 
-Only return a valid JSON object strictly matching the following ProjectContext structure:
+Return a JSON object with exactly one key "${stage}" whose value is an object with fields only from this schema:
 
-{
-  "idea": string (optional),
-  "refinedIdea": string (optional),
-  "marketOverview": string (optional),
-  "competitors": string[] (optional),
-  "branding": {
-    "name": string (optional),
-    "tagline": string (optional),
-    "tone": string (optional)
-  } (optional),
-  "uiPreferences": {
-    "colorPalette": string[] (optional),
-    "layoutPreferences": string (optional),
-    "accessibilityNeeds": string[] (optional)
-  } (optional),
-  "techStack": string[] (optional),
-  "summary": string (optional)
-}
+${getStageSchema(stage)}
 
-🔒 Strict extraction rules:
-- Only include fields related to the current stage: "${stage}".
-- Only include fields that are explicitly stated or clearly required by the assistant's reply.
-- Omit all fields unrelated to the current stage, even if mentioned.
-- Do NOT infer values from unrelated context.
-- Do not include null, undefined, empty strings, or empty arrays.
-- Do not guess or generate values not present in the assistant reply.
-- Do not include keys outside the schema.
-- ONLY return a raw JSON object with no explanation or commentary.
-- DO NOT include phrases like "Here is the JSON", "Output:", or use markdown.
-- Return ONLY the JSON object, starting and ending with curly braces.
+Do NOT include any keys or data outside this schema.
 
-This is for a partial update — do NOT delete or overwrite existing fields not mentioned in the reply.
+If no relevant data is present for the stage, return an empty object under the stage key.
+
+Return ONLY the JSON object, no explanation, no markdown.
 
 Assistant reply:
 """
 ${reply}
 """
-  `.trim();
+`.trim();
 
   const messages: LLMMessage[] = [
     { role: "system", content: extractionPrompt },
@@ -61,17 +79,22 @@ ${reply}
   console.log("jsonOutput", jsonOutput);
 
   const cleaned = jsonOutput
-    .replace(/```json|```/g, "") // remove markdown code blocks
-    .replace(/^.*?\{/, "{") // remove everything before first {
-    .replace(/\}[^}]*$/, "}"); // remove anything after last }
+    .replace(/```json|```/g, "")
+    .replace(/^.*?\{/, "{")
+    .replace(/\}[^}]*$/, "}");
 
   try {
     const parsed = JSON.parse(cleaned);
-    if (parsed && typeof parsed === "object") {
-      return parsed;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      stage in parsed &&
+      typeof parsed[stage] === "object"
+    ) {
+      return { [stage]: parsed[stage] };
     }
   } catch (err) {
-    console.error("❌ Still failed to parse JSON:", cleaned);
+    console.error("Failed to parse JSON:", cleaned);
   }
 
   return null;

@@ -7,7 +7,7 @@ import { refinementNode } from "../nodes/stages_nodes/refinement.node";
 import { marketAnalysisNode } from "../nodes/stages_nodes/marketAnalysis.node";
 import { competitiveAnalysisNode } from "../nodes/stages_nodes/competitiveAnalysis.node";
 import { documentGenerationNode } from "../nodes/stages_nodes/documentGeneration.node";
-import { brandingFoundationNode } from "../nodes/stages_nodes/brandingFoundation.node";
+// import { brandingFoundationNode } from "../nodes/stages_nodes/brandingFoundation.node";
 import { techStackSuggestionNode } from "../nodes/stages_nodes/techStackSuggestion.node";
 import { uiPreferencesNode } from "../nodes/stages_nodes/uiPreferences.node";
 import { finalSummaryNode } from "../nodes/stages_nodes/finalSummary.node";
@@ -70,13 +70,13 @@ const stageHandlerStateNode = async (state: any) => {
         onData: state.onData,
       });
       break;
-    case "branding_foundation":
-      await brandingFoundationNode.invoke({
-        projectId: state.projectId,
-        userMessage: state.latestMessage,
-        onData: state.onData,
-      });
-      break;
+    // case "branding_foundation": // TODO: remove this case
+    //   await brandingFoundationNode.invoke({
+    //     projectId: state.projectId,
+    //     userMessage: state.latestMessage,
+    //     onData: state.onData,
+    //   });
+    //   break;
     case "tech_stack_suggestion":
       await techStackSuggestionNode.invoke({
         projectId: state.projectId,

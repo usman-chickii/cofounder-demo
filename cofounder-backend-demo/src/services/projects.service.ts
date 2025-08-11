@@ -1,8 +1,7 @@
 import { supabase } from "../utils/supabase";
 import { ChatbotStage } from "../types/chatbot.types";
-import { STAGES } from "../types/chatbot.types";
 import { ProjectContext } from "../types/projectContext.types";
-import { deepMergeProjectContext } from "../utils/projectContext.util";
+// import { deepMergeProjectContext } from "../utils/projectContext.util";
 
 export async function getProjectStage(
   projectId: string
@@ -29,71 +28,11 @@ export async function setProjectStage(
   if (error) throw new Error(`setProjectStage failed: ${error.message}`);
 }
 
-export async function getCompletedStages(
-  projectId: string
-): Promise<ChatbotStage[]> {
-  const { data, error } = await supabase
-    .from("projects")
-    .select("completed_stages")
-    .eq("id", projectId)
-    .single();
-
-  if (error) throw new Error(`getCompletedStages failed: ${error.message}`);
-  return (data?.completed_stages || []) as ChatbotStage[];
-}
-
-export async function markStageCompleted(
-  projectId: string,
-  stage: ChatbotStage
-): Promise<void> {
-  const completed = await getCompletedStages(projectId);
-  if (!completed.includes(stage)) {
-    completed.push(stage);
-    const { error } = await supabase
-      .from("projects")
-      .update({ completed_stages: completed })
-      .eq("id", projectId);
-    if (error) throw new Error(`markStageCompleted failed: ${error.message}`);
-  }
-}
-
-export function getNextUncompletedStage(
-  currentStage?: ChatbotStage,
-  completed: ChatbotStage[] = []
-): ChatbotStage | null {
-  if (!currentStage)
-    return STAGES.length > 0 ? (STAGES[0] as ChatbotStage) : null;
-  const currentIndex = STAGES.indexOf(currentStage);
-  for (let i = currentIndex + 1; i < STAGES.length; i++) {
-    const stage = STAGES[i];
-    if (stage && !completed.includes(stage)) {
-      return stage;
-    }
-  }
-  return null;
-}
-
-export function getPreviousUncompletedStage(
-  currentStage?: ChatbotStage,
-  completed: ChatbotStage[] = []
-): ChatbotStage | null {
-  if (!currentStage) return null;
-
-  const currentIndex = STAGES.indexOf(currentStage);
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    const stage = STAGES[i];
-    if (stage && !completed.includes(stage)) {
-      return stage;
-    }
-  }
-  return null;
-}
-
 export async function updateProjectContext(
   projectId: string,
+  stage: ChatbotStage,
   updates: Partial<ProjectContext>
 ): Promise<void> {
-  // Fetch existing context
   const result = await supabase
     .from("projects")
     .select("session_metadata")
@@ -109,11 +48,23 @@ export async function updateProjectContext(
   const existingContext = (result.data?.session_metadata ??
     {}) as ProjectContext;
 
-  // Merge updates
-  const updatedContext: ProjectContext = deepMergeProjectContext(
-    existingContext,
-    updates
-  );
+  // Extract only the metadata for the current stage from updates
+  const stageUpdate = updates[stage as keyof ProjectContext];
+
+  if (!stageUpdate) {
+    // Nothing to update for this stage
+    return;
+  }
+
+  // Prepare new context with only the current stage updated
+  const updatedContext: ProjectContext = {
+    ...existingContext,
+    [stage]: {
+      ...existingContext[stage as keyof ProjectContext],
+      ...stageUpdate,
+    },
+  };
+  console.log("updatedContext", updatedContext);
 
   // Save back to DB
   const { error } = await supabase

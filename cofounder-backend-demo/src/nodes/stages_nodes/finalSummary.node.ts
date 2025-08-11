@@ -52,7 +52,7 @@ export const finalSummaryNode = new RunnableLambda<
 
     const extracted = await extractMetadataFromReply(assistantReply, STAGE_KEY);
     if (extracted) {
-      await updateProjectContext(projectId, extracted);
+      await updateProjectContext(projectId, STAGE_KEY, extracted);
     }
 
     return { stage: STAGE_KEY };

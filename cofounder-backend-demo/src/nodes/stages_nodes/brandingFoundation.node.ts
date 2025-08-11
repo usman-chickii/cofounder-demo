@@ -1,59 +1,59 @@
-import { RunnableLambda } from "@langchain/core/runnables";
-import { getSystemPrompt } from "../../lib/systemPrompt";
-import { streamLLM } from "../../services/llm/llmProvider.service";
-import { ChatbotStage } from "../../types/chatbot.types";
-import { LLMMessage } from "../../types/llm.types";
-import { saveMessage } from "../../services/messages.service";
-import { buildContextPrompt } from "../../utils/contextBuilder";
-import { extractMetadataFromReply } from "../../lib/extractMetaData";
-import { updateProjectContext } from "../../services/projects.service";
+// import { RunnableLambda } from "@langchain/core/runnables";
+// import { getSystemPrompt } from "../../lib/systemPrompt";
+// import { streamLLM } from "../../services/llm/llmProvider.service";
+// import { ChatbotStage } from "../../types/chatbot.types";
+// import { LLMMessage } from "../../types/llm.types";
+// import { saveMessage } from "../../services/messages.service";
+// import { buildContextPrompt } from "../../utils/contextBuilder";
+// import { extractMetadataFromReply } from "../../lib/extractMetaData";
+// import { updateProjectContext } from "../../services/projects.service";
 
-const STAGE_KEY: ChatbotStage = "branding_foundation";
-const PRELOADED_PROMPT = getSystemPrompt(STAGE_KEY);
+// const STAGE_KEY: ChatbotStage = "branding_foundation";
+// const PRELOADED_PROMPT = getSystemPrompt(STAGE_KEY);
 
-interface BrandingFoundationInput {
-  projectId: string;
-  userMessage: string;
-  onData: (chunk: string) => void;
-}
+// interface BrandingFoundationInput {
+//   projectId: string;
+//   userMessage: string;
+//   onData: (chunk: string) => void;
+// }
 
-export const brandingFoundationNode = new RunnableLambda<
-  BrandingFoundationInput,
-  { stage: ChatbotStage }
->({
-  func: async ({ projectId, userMessage, onData }: BrandingFoundationInput) => {
-    saveMessage("user", userMessage, projectId, STAGE_KEY).catch(console.error);
+// export const brandingFoundationNode = new RunnableLambda<
+//   BrandingFoundationInput,
+//   { stage: ChatbotStage }
+// >({
+//   func: async ({ projectId, userMessage, onData }: BrandingFoundationInput) => {
+//     saveMessage("user", userMessage, projectId, STAGE_KEY).catch(console.error);
 
-    const systemPrompt = `
-    ${PRELOADED_PROMPT}
+//     const systemPrompt = `
+//     ${PRELOADED_PROMPT}
 
-    You are assisting the user in the "${STAGE_KEY}" stage.
-    Use the previous messages for context if helpful.
-    `;
+//     You are assisting the user in the "${STAGE_KEY}" stage.
+//     Use the previous messages for context if helpful.
+//     `;
 
-    const context = await buildContextPrompt(projectId, STAGE_KEY);
+//     const context = await buildContextPrompt(projectId, STAGE_KEY);
 
-    const messages: LLMMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "system", content: context },
-      { role: "user", content: userMessage },
-    ];
+//     const messages: LLMMessage[] = [
+//       { role: "system", content: systemPrompt },
+//       { role: "system", content: context },
+//       { role: "user", content: userMessage },
+//     ];
 
-    let assistantReply = "";
+//     let assistantReply = "";
 
-    await streamLLM(messages, (chunk) => {
-      assistantReply += chunk;
-      onData(chunk);
-    });
+//     await streamLLM(messages, (chunk) => {
+//       assistantReply += chunk;
+//       onData(chunk);
+//     });
 
-    saveMessage("assistant", assistantReply.trim(), projectId, STAGE_KEY).catch(
-      console.error
-    );
-    const extracted = await extractMetadataFromReply(assistantReply, STAGE_KEY);
-    if (extracted) {
-      await updateProjectContext(projectId, extracted);
-    }
+//     saveMessage("assistant", assistantReply.trim(), projectId, STAGE_KEY).catch(
+//       console.error
+//     );
+//     const extracted = await extractMetadataFromReply(assistantReply, STAGE_KEY);
+//     if (extracted) {
+//       await updateProjectContext(projectId, extracted);
+//     }
 
-    return { stage: STAGE_KEY };
-  },
-});
+//     return { stage: STAGE_KEY };
+//   },
+// });

@@ -35,7 +35,7 @@ export async function getMessages(projectId: string, limit: number = 10) {
     .limit(limit);
 
   if (error) throw error;
-  return data.reverse(); // reverse so
+  return data.reverse();
 }
 
 export async function getStageMessages(
@@ -56,5 +56,5 @@ export async function getStageMessages(
     return [];
   }
 
-  return data.reverse(); // Reverse so oldest is first
+  return data.reverse().map((message) => message.content);
 }

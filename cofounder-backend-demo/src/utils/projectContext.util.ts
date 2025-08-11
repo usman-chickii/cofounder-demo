@@ -23,6 +23,11 @@ function deepMergeProjectContext(
     const existingValue = result[typedKey];
     const updateValue = updates[typedKey];
 
+    // Skip null or undefined update values to avoid overwriting existing data
+    if (updateValue === null || updateValue === undefined) {
+      continue;
+    }
+
     if (isObject(existingValue) && isObject(updateValue)) {
       result[typedKey] = {
         ...existingValue,
